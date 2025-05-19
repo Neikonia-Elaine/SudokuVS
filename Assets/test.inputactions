@@ -1,0 +1,34 @@
+{
+    "name": "test",
+    "maps": [
+        {
+            "name": "GamePlay",
+            "id": "a990e31f-0043-4b3f-bb5f-6a7c614e366e",
+            "actions": [
+                {
+                    "name": "New action",
+                    "type": "Button",
+                    "id": "e9a05879-781c-473c-8490-1caea627d27c",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "549a9c1e-c854-4e1b-ab5e-31a671d46448",
+                    "path": "<Keyboard>/delete",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "New action",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
