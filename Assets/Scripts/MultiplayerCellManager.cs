@@ -4,15 +4,15 @@ using TMPro;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// CellManager的多人游戏扩展版本，添加了对手数独可视化所需的功能
-/// 继承自原始CellManager，不会影响单人模式的功能
+/// 简化版多人游戏单元格管理器
+/// 移除了对手区分逻辑，只保留必要的网络同步功能
 /// </summary>
 public class MultiplayerCellManager : MonoBehaviour, IPointerClickHandler
 {
     // 引用原始CellManager
     private CellManager baseCellManager;
 
-    // 背景图像用于显示对手数独的颜色
+    // 背景图像用于显示不同状态的颜色
     private Image backgroundImage;
 
     // 是否启用交互
@@ -52,14 +52,14 @@ public class MultiplayerCellManager : MonoBehaviour, IPointerClickHandler
         bgRT.offsetMax = Vector2.zero;
     }
 
-    // 实现IPointerClickHandler接口 - 使用interactionEnabled字段
+    // 实现IPointerClickHandler接口 - 转发点击事件
     public void OnPointerClick(PointerEventData eventData)
     {
         // 只有在交互启用时才处理点击事件
         if (interactionEnabled && baseCellManager != null)
         {
             // 可以在这里转发到原始CellManager的点击逻辑
-            Debug.Log("多人模式单元格点击 - 交互已启用");
+            Debug.Log("多人模式单元格点击");
         }
         else
         {
@@ -67,14 +67,14 @@ public class MultiplayerCellManager : MonoBehaviour, IPointerClickHandler
         }
     }
 
-    // 设置背景颜色 - 用于对手数独的可视化
+    // 设置背景颜色 - 用于特殊状态的可视化
     public void SetBackgroundColor(Color color)
     {
         if (backgroundImage == null) return;
         backgroundImage.color = color;
     }
 
-    // 禁用交互 - 用于对手数独棋盘
+    // 禁用交互
     public void DisableInteraction()
     {
         interactionEnabled = false;

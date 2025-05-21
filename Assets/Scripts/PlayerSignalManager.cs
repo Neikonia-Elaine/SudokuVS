@@ -1,12 +1,11 @@
 using UnityEngine;
 using Unity.Netcode;
-using System.Collections.Generic;
 using System;
 
-/// <summary>
+
 /// 处理玩家信息更新和玩家间通信
-/// 此脚本通过ServerRpc和ClientRpc直接通信，不需要创建网络对象实例
-/// </summary>
+/// 精简版 - 移除了玩家角色划分逻辑
+
 public class PlayerSignalManager : NetworkBehaviour
 {
     // 单例模式
@@ -24,17 +23,6 @@ public class PlayerSignalManager : NetworkBehaviour
 
     // 信号接收事件
     public event Action<SignalType, int, string, ulong> OnSignalReceived;
-
-    // 玩家角色枚举 (从NetworkPlayerController复制过来)
-    public enum PlayerRole : byte
-    {
-        Host,     // 房主
-        Guest     // 客户玩家
-    }
-
-    // 本地玩家角色
-    [SerializeField]
-    private PlayerRole localPlayerRole = PlayerRole.Host;
 
     private void Awake()
     {
@@ -54,18 +42,7 @@ public class PlayerSignalManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
-
-        // 自动分配角色
-        if (base.IsServer || base.IsHost)
-        {
-            localPlayerRole = PlayerRole.Host;
-            Debug.Log("玩家角色已分配: 房主");
-        }
-        else
-        {
-            localPlayerRole = PlayerRole.Guest;
-            Debug.Log("玩家角色已分配: 挑战者");
-        }
+        Debug.Log($"信号管理器已初始化，本地客户端ID: {NetworkManager.Singleton.LocalClientId}");
     }
 
     public override void OnDestroy()
@@ -80,34 +57,34 @@ public class PlayerSignalManager : NetworkBehaviour
 
     #region 公共方法 - 发送信号
 
-    /// <summary>
+    
     /// 发送按钮按下信号
-    /// </summary>
+    
     /// <param name="value">可选整数值</param>
     public void SendButtonPressSignal(int value = 1)
     {
         SendSignal(SignalType.ButtonPress, value, "");
     }
 
-    /// <summary>
+    
     /// 发送游戏开始信号
-    /// </summary>
+    
     public void SendGameStartSignal()
     {
         SendSignal(SignalType.GameStart, 0, "");
     }
 
-    /// <summary>
+    
     /// 发送游戏结束信号
-    /// </summary>
+    
     public void SendGameEndSignal()
     {
         SendSignal(SignalType.GameEnd, 0, "");
     }
 
-    /// <summary>
+    
     /// 发送自定义信号
-    /// </summary>
+    
     public void SendSignal(SignalType type, int intValue, string stringValue)
     {
         if (!NetworkManager.Singleton.IsConnectedClient)
@@ -139,9 +116,9 @@ public class PlayerSignalManager : NetworkBehaviour
 
     #region 网络RPC
 
-    /// <summary>
+    
     /// 服务器RPC - 客户端调用发送信号到服务器
-    /// </summary>
+    
     [ServerRpc(RequireOwnership = false)]
     private void SendSignalServerRpc(byte signalType, int intValue, string stringValue, ServerRpcParams rpcParams = default)
     {
@@ -152,9 +129,9 @@ public class PlayerSignalManager : NetworkBehaviour
         BroadcastSignalClientRpc(signalType, intValue, stringValue, senderId);
     }
 
-    /// <summary>
+    
     /// 客户端RPC - 服务器广播信号给所有客户端
-    /// </summary>
+    
     [ClientRpc]
     private void BroadcastSignalClientRpc(byte signalType, int intValue, string stringValue, ulong senderId)
     {
@@ -173,31 +150,11 @@ public class PlayerSignalManager : NetworkBehaviour
 
     #endregion
 
-    #region 公共方法 - 获取玩家信息
-
-    /// <summary>
-    /// 获取玩家角色
-    /// </summary>
-    public PlayerRole GetPlayerRole()
+    
+    /// 判断是否为服务器或主机
+    
+    public bool IsServerOrHost()
     {
-        return localPlayerRole;
+        return IsServer || IsHost;
     }
-
-    /// <summary>
-    /// 检查本地玩家是否是房主
-    /// </summary>
-    public bool IsRoomHost()
-    {
-        return localPlayerRole == PlayerRole.Host;
-    }
-
-    /// <summary>
-    /// 检查本地玩家是否是挑战者
-    /// </summary>
-    public bool IsGuest()
-    {
-        return localPlayerRole == PlayerRole.Guest;
-    }
-
-    #endregion
 }

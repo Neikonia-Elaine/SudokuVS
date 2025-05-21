@@ -2,20 +2,15 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// 用于管理玩家UI界面和按钮交互
-/// </summary>
+/// 简化版玩家UI界面 - 移除角色区分，保留通信功能
 public class PlayerSignalUI : MonoBehaviour
 {
     [Header("玩家信号UI")]
     [SerializeField] private Button sendSignalButton;
     [SerializeField] private TextMeshProUGUI signalDisplayText;
-    [SerializeField] private TextMeshProUGUI playerRoleText;
 
     [Header("显示设置")]
     [SerializeField] private float messageDisplayTime = 3f;
-    [SerializeField] private Color hostColor = Color.green;
-    [SerializeField] private Color guestColor = Color.blue;
 
     private float messageTimer = 0f;
 
@@ -34,14 +29,7 @@ public class PlayerSignalUI : MonoBehaviour
         }
 
         // 初始化UI
-        UpdatePlayerRoleDisplay();
         ClearSignalDisplay();
-    }
-
-    private void OnEnable()
-    {
-        // 确保启用时更新UI
-        UpdatePlayerRoleDisplay();
     }
 
     private void OnDestroy()
@@ -65,9 +53,6 @@ public class PlayerSignalUI : MonoBehaviour
                 ClearSignalDisplay();
             }
         }
-
-        // 持续更新玩家角色显示（可选，如果角色可能动态变化）
-        UpdatePlayerRoleDisplay();
     }
 
     // 按钮点击事件
@@ -92,34 +77,6 @@ public class PlayerSignalUI : MonoBehaviour
         {
             PlayerSignalManager.Instance.SendButtonPressSignal(value);
             DisplayLocalMessage($"已发送值: {value}");
-        }
-    }
-
-    // 更新玩家角色显示
-    private void UpdatePlayerRoleDisplay()
-    {
-        if (playerRoleText != null && PlayerSignalManager.Instance != null)
-        {
-            if (PlayerSignalManager.Instance.IsRoomHost())
-            {
-                playerRoleText.text = "你的角色: 房主";
-                playerRoleText.color = hostColor;
-            }
-            else if (PlayerSignalManager.Instance.IsGuest())
-            {
-                playerRoleText.text = "你的角色: 挑战者";
-                playerRoleText.color = guestColor;
-            }
-            else
-            {
-                playerRoleText.text = "等待连接...";
-                playerRoleText.color = Color.gray;
-            }
-        }
-        else if (playerRoleText != null)
-        {
-            playerRoleText.text = "未连接";
-            playerRoleText.color = Color.gray;
         }
     }
 

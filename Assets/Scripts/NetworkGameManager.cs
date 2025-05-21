@@ -5,8 +5,9 @@ using Unity.Netcode;
 using System.Collections.Generic;
 
 /// <summary>
+/// 网络游戏管理器 - 修改版
+/// 保留双棋盘功能但移除玩家角色区分
 /// 负责管理数独游戏的网络同步和多人游戏界面
-/// 整合了原来的NetworkGameManager和MultiplayerSudokuManager的功能
 /// </summary>
 public class NetworkGameManager : NetworkBehaviour
 {
@@ -18,17 +19,16 @@ public class NetworkGameManager : NetworkBehaviour
 
     [Header("Multiplayer UI")]
     [SerializeField] private GameObject twoPlayerGamePanel;
-    [SerializeField] private Transform mainSudokuContainer;
-    [SerializeField] private Transform opponentSudokuContainer;
+    [SerializeField] private Transform localPlayerBoardContainer; // 本地玩家棋盘容器
+    [SerializeField] private Transform remoteBoardContainer; // 远程玩家棋盘容器
 
     [Header("Sudoku Prefab")]
     [SerializeField] private GameObject sudokuBoardPrefab;
 
-    [Header("Opponent View Settings")]
-    [SerializeField] private Color opponentFixedCellColor = new Color(0.3f, 0.3f, 0.7f, 0.7f);
-    [SerializeField] private Color opponentMovedCellColor = new Color(0.2f, 0.6f, 1f, 0.8f);
-    [SerializeField] private Color opponentConflictCellColor = new Color(0.9f, 0.3f, 0.3f, 0.7f);
-    [SerializeField] private float opponentBoardScale = 0.33f; // 对手数独大小比例
+    [Header("远程玩家棋盘设置")]
+    [SerializeField] private Color remoteMovedCellColor = new Color(0.2f, 0.6f, 1f, 0.8f); // 远程玩家移动单元格颜色
+    [SerializeField] private Color remoteConflictCellColor = new Color(0.9f, 0.3f, 0.3f, 0.7f); // 远程玩家冲突单元格颜色
+    [SerializeField] private float remoteBoardScale = 0.33f; // 远程玩家数独大小比例
 
     // 表示一个移动操作，实现 IEquatable 接口以满足 NetworkList 的要求
     public struct MoveData : INetworkSerializable, System.IEquatable<MoveData>
@@ -97,13 +97,13 @@ public class NetworkGameManager : NetworkBehaviour
     private NetworkList<MoveData> moves;
 
     // 多人游戏UI对象引用
-    private GameObject mainBoardInstance;
-    private GameObject opponentBoardInstance;
-    private SudokuGridSpawner mainGridSpawner;
-    private SudokuGridSpawner opponentGridSpawner;
+    private GameObject localBoardInstance;
+    private GameObject remoteBoardInstance;
+    private SudokuGridSpawner localGridSpawner;
+    private SudokuGridSpawner remoteGridSpawner;
 
-    // 追踪对手移动的单元格
-    private HashSet<Vector2Int> opponentMovedCells = new HashSet<Vector2Int>();
+    // 追踪远程玩家移动的单元格
+    private HashSet<Vector2Int> remoteMovedCells = new HashSet<Vector2Int>();
 
     private void Awake()
     {
@@ -152,14 +152,14 @@ public class NetworkGameManager : NetworkBehaviour
         base.OnDestroy();
 
         // 清理资源
-        if (mainBoardInstance != null)
+        if (localBoardInstance != null)
         {
-            Destroy(mainBoardInstance);
+            Destroy(localBoardInstance);
         }
 
-        if (opponentBoardInstance != null)
+        if (remoteBoardInstance != null)
         {
-            Destroy(opponentBoardInstance);
+            Destroy(remoteBoardInstance);
         }
     }
 
@@ -219,7 +219,7 @@ public class NetworkGameManager : NetworkBehaviour
         if (gameManager != null)
         {
             // 在服务器上也创建游戏界面
-            if (mainBoardInstance == null || opponentBoardInstance == null)
+            if (localBoardInstance == null || remoteBoardInstance == null)
             {
                 Debug.Log("服务器创建多人游戏界面...");
                 SetupMultiplayerBoards();
@@ -250,155 +250,170 @@ public class NetworkGameManager : NetworkBehaviour
     // 创建多人游戏的数独板
     private void SetupMultiplayerBoards()
     {
-        // 创建主玩家的数独板
-        CreateMainSudokuBoard();
+        // 创建本地玩家的数独板
+        CreateLocalPlayerSudokuBoard();
 
-        // 创建对手的小型数独板
-        CreateOpponentSudokuBoard();
+        // 创建远程玩家的小型数独板
+        CreateRemotePlayerSudokuBoard();
     }
 
-    // 创建主数独板
-    private void CreateMainSudokuBoard()
+
+    // 创建本地玩家数独板
+    private void CreateLocalPlayerSudokuBoard()
     {
-        Debug.Log("创建主数独板");
+        Debug.Log("创建本地玩家数独板");
 
-        // 销毁现有实例
-        if (mainBoardInstance != null)
+        // 检查容器
+        if (localPlayerBoardContainer == null)
         {
-            Destroy(mainBoardInstance);
-        }
-
-        // 检查容器和预制体
-        if (mainSudokuContainer == null)
-        {
-            Debug.LogError("主数独容器为空!");
+            Debug.LogError("本地玩家数独容器为空!");
             return;
         }
 
-        if (sudokuBoardPrefab == null)
+        // 使用GameManager创建数独板
+        if (gameManager != null)
         {
-            Debug.LogError("数独板预制体为空!");
-            return;
-        }
+            // 设置本地玩家数独板的位置（居中）
+            Vector2 boardPosition = Vector2.zero;
 
-        // 创建新数独板
-        mainBoardInstance = Instantiate(sudokuBoardPrefab, mainSudokuContainer);
-        mainBoardInstance.transform.localPosition = Vector3.zero;
-        mainBoardInstance.transform.localScale = Vector3.one;
+            // 重要：确保localBoardInstance的父对象是正确的
+            localBoardInstance = gameManager.CreateAndSetupSudokuBoard(boardPosition);
 
-        Debug.Log("主数独板已创建");
+            if (localBoardInstance != null)
+            {
+                // 强制设置父对象为本地容器
+                localBoardInstance.transform.SetParent(localPlayerBoardContainer, false);
 
-        // 获取并设置 GridSpawner
-        mainGridSpawner = mainBoardInstance.GetComponentInChildren<SudokuGridSpawner>();
-        if (mainGridSpawner != null && gameManager != null)
-        {
-            Debug.Log("设置主GridSpawner到GameManager");
-            gameManager.SetGridSpawner(mainGridSpawner);
+                // 重置位置和缩放，确保适当尺寸
+                localBoardInstance.transform.localPosition = Vector3.zero;
+                localBoardInstance.transform.localScale = Vector3.one;
+
+                // 调整 RectTransform 来确保正确的布局
+                RectTransform rt = localBoardInstance.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchoredPosition = Vector2.zero;
+                    rt.sizeDelta = Vector2.zero; // 使用容器的尺寸
+                }
+
+                Debug.Log("本地玩家数独板已创建");
+
+                // 获取GridSpawner并设置到GameManager
+                localGridSpawner = localBoardInstance.GetComponentInChildren<SudokuGridSpawner>();
+                if (localGridSpawner != null)
+                {
+                    gameManager.SetGridSpawner(localGridSpawner);
+                }
+            }
+            else
+            {
+                Debug.LogError("创建本地玩家数独板失败!");
+            }
         }
         else
         {
-            if (mainGridSpawner == null)
-                Debug.LogError("无法找到主GridSpawner组件!");
-
-            if (gameManager == null)
-                Debug.LogError("GameManager引用为空!");
+            Debug.LogError("GameManager引用为空，无法创建数独板!");
         }
     }
 
-    // 创建对手的小数独板
-    private void CreateOpponentSudokuBoard()
+    // 创建远程玩家的小数独板
+    private void CreateRemotePlayerSudokuBoard()
     {
-        Debug.Log("创建对手数独板");
+        Debug.Log("创建远程玩家数独板");
+
+        // 检查容器
+        if (remoteBoardContainer == null)
+        {
+            Debug.LogError("远程玩家数独容器为空!");
+            return;
+        }
 
         // 销毁现有实例
-        if (opponentBoardInstance != null)
+        if (remoteBoardInstance != null)
         {
-            Destroy(opponentBoardInstance);
+            Destroy(remoteBoardInstance);
         }
 
-        // 检查容器和预制体
-        if (opponentSudokuContainer == null)
+        // 使用与本地玩家相同的预制体创建远程玩家数独板
+        if (gameManager != null && sudokuBoardPrefab != null) // 使用类中的sudokuBoardPrefab，不依赖gameManager的
         {
-            Debug.LogError("对手数独容器为空!");
-            return;
-        }
+            // 直接创建远程玩家棋盘，不经过gameManager
+            remoteBoardInstance = Instantiate(sudokuBoardPrefab);
 
-        if (sudokuBoardPrefab == null)
+            // 明确设置父对象
+            remoteBoardInstance.transform.SetParent(remoteBoardContainer, false);
+
+            // 显式设置位置和缩放
+            remoteBoardInstance.transform.localPosition = Vector3.zero;
+            remoteBoardInstance.transform.localScale = new Vector3(remoteBoardScale, remoteBoardScale, 1f);
+
+            // 调整 RectTransform
+            RectTransform rt = remoteBoardInstance.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                rt.anchoredPosition = Vector2.zero;
+                rt.sizeDelta = Vector2.zero; // 使用容器的尺寸
+            }
+
+            Debug.Log("远程玩家数独板已创建");
+
+            // 获取GridSpawner
+            remoteGridSpawner = remoteBoardInstance.GetComponentInChildren<SudokuGridSpawner>();
+            if (remoteGridSpawner == null)
+            {
+                Debug.LogError("无法找到远程GridSpawner组件!");
+                return;
+            }
+
+            // 清空远程玩家移动记录
+            remoteMovedCells.Clear();
+
+            // 初始化远程玩家数独板
+            UpdateRemoteFixedCells();
+
+            // 禁用远程玩家数独的交互
+            DisableRemoteBoardInteraction();
+        }
+        else
         {
-            Debug.LogError("数独板预制体为空!");
-            return;
+            Debug.LogError("无法创建远程玩家数独板：缺少必要引用!");
         }
-
-        // 创建新的对手数独板
-        opponentBoardInstance = Instantiate(sudokuBoardPrefab, opponentSudokuContainer);
-
-        // 调整大小为主数独的1/3
-        opponentBoardInstance.transform.localScale = new Vector3(opponentBoardScale, opponentBoardScale, 1f);
-        opponentBoardInstance.transform.localPosition = Vector3.zero;
-
-        Debug.Log("对手数独板已创建");
-
-        // 获取GridSpawner
-        opponentGridSpawner = opponentBoardInstance.GetComponentInChildren<SudokuGridSpawner>();
-        if (opponentGridSpawner == null)
-        {
-            Debug.LogError("无法找到对手GridSpawner组件!");
-            return;
-        }
-
-        // 清空对手移动记录
-        opponentMovedCells.Clear();
-
-        // 初始化对手数独板 - 将所有固定格子标记为特定颜色
-        if (opponentGridSpawner != null && gameManager != null)
-        {
-            Debug.Log("更新对手数独板固定单元格");
-            UpdateOpponentFixedCells();
-        }
-
-        // 禁用对手数独的交互
-        DisableOpponentBoardInteraction();
     }
 
-    // 更新对手数独板上的固定单元格显示
-    private void UpdateOpponentFixedCells()
+
+    // 更新远程玩家数独板上的固定单元格显示
+    private void UpdateRemoteFixedCells()
     {
-        if (opponentGridSpawner == null || gameManager == null) return;
+        if (remoteGridSpawner == null || gameManager == null) return;
 
         for (int row = 0; row < 9; row++)
         {
             for (int col = 0; col < 9; col++)
             {
-                CellManager cellManager = opponentGridSpawner.GetCellManager(row, col);
+                CellManager cellManager = remoteGridSpawner.GetCellManager(row, col);
                 if (cellManager != null)
                 {
-                    // 为对手数独板设置空文本（不显示数字）
-                    cellManager.SetNumber(0);
+                    // 设置数字显示（与本地玩家棋盘相同的数字）
+                    int value = gameManager.GetCellValue(row, col);
+                    cellManager.SetNumber(value);
 
-                    // 使用自定义颜色标记固定单元格
+                    // 固定单元格使用与本地相同的颜色策略
                     if (gameManager.IsFixedCell(row, col))
                     {
-                        cellManager.SetColor(opponentFixedCellColor);
-
-                        // 添加背景颜色 - 在单元格对象上添加Image组件
-                        Image bgImage = AddCellBackgroundImage(cellManager.gameObject);
-                        if (bgImage != null)
-                        {
-                            bgImage.color = opponentFixedCellColor;
-                        }
+                        cellManager.SetColor(gameManager.fixedNumberColor);
                     }
                 }
             }
         }
     }
 
-    // 禁用对手数独的交互功能
-    private void DisableOpponentBoardInteraction()
+    // 禁用远程玩家数独的交互功能
+    private void DisableRemoteBoardInteraction()
     {
-        if (opponentBoardInstance == null) return;
+        if (remoteBoardInstance == null) return;
 
-        // 禁用对手数独上的所有Button和Input组件
-        Button[] buttons = opponentBoardInstance.GetComponentsInChildren<Button>();
+        // 禁用远程玩家数独上的所有Button和Input组件
+        Button[] buttons = remoteBoardInstance.GetComponentsInChildren<Button>();
         foreach (Button button in buttons)
         {
             button.enabled = false;
@@ -450,26 +465,29 @@ public class NetworkGameManager : NetworkBehaviour
                 gameManager.SetCellValue(move.row, move.col, move.value);
                 Debug.Log($"应用玩家 {move.playerId} 的移动: ({move.row}, {move.col}) = {move.value}");
 
-                // 更新对手的小数独视图
-                UpdateOpponentMove(move.row, move.col, move.value);
+                // 更新远程玩家的小数独视图
+                UpdateRemoteMove(move.row, move.col, move.value);
             }
         }
     }
 
-    // 更新对手数独上的移动
-    private void UpdateOpponentMove(int row, int col, int value)
+    // 更新远程玩家数独上的移动
+    private void UpdateRemoteMove(int row, int col, int value)
     {
-        if (opponentGridSpawner == null) return;
+        if (remoteGridSpawner == null) return;
 
+        CellManager cellManager = remoteGridSpawner.GetCellManager(row, col);
         Vector2Int cellPos = new Vector2Int(row, col);
-        CellManager cellManager = opponentGridSpawner.GetCellManager(row, col);
 
         if (cellManager != null)
         {
+            // 更新数字
+            cellManager.SetNumber(value);
+
             // 获取或创建背景图像
             Image bgImage = AddCellBackgroundImage(cellManager.gameObject);
 
-            // 设置背景颜色来表示对手的移动
+            // 设置背景颜色来表示远程玩家的移动
             if (value > 0 && bgImage != null)
             {
                 // 检查是否有冲突
@@ -477,21 +495,23 @@ public class NetworkGameManager : NetworkBehaviour
 
                 if (hasConflict)
                 {
-                    bgImage.color = opponentConflictCellColor;
+                    bgImage.color = remoteConflictCellColor;
+                    cellManager.SetColor(gameManager.conflictNumberColor);
                 }
                 else
                 {
-                    bgImage.color = opponentMovedCellColor;
+                    bgImage.color = remoteMovedCellColor;
+                    cellManager.SetColor(gameManager.normalNumberColor);
                 }
 
-                // 记录对手已移动的单元格
-                opponentMovedCells.Add(cellPos);
+                // 记录远程玩家已移动的单元格
+                remoteMovedCells.Add(cellPos);
             }
             else if (bgImage != null)
             {
                 // 清除移动（值为0）
                 bgImage.color = Color.clear;
-                opponentMovedCells.Remove(cellPos);
+                remoteMovedCells.Remove(cellPos);
             }
         }
     }
@@ -550,7 +570,7 @@ public class NetworkGameManager : NetworkBehaviour
             Random.InitState(gameRandomSeed.Value);
 
             // 创建UI界面（如果需要）
-            if (mainBoardInstance == null || opponentBoardInstance == null)
+            if (localBoardInstance == null || remoteBoardInstance == null)
             {
                 Debug.Log("客户端创建多人游戏界面...");
                 SetupMultiplayerBoards();
@@ -585,6 +605,9 @@ public class NetworkGameManager : NetworkBehaviour
             yield return new WaitForSeconds(0.5f);
             gameManager.UpdateAllCellsUI();
 
+            // 更新远程玩家棋盘的固定单元格
+            UpdateRemoteFixedCells();
+
             Debug.Log("客户端游戏初始化完成");
         }
         else
@@ -610,12 +633,6 @@ public class NetworkGameManager : NetworkBehaviour
             {
                 // 客户端通过 RPC 通知服务器
                 MakeMoveServerRpc(row, col, value);
-            }
-
-            // 如果自己也有对手视图，更新自己的对手视图
-            if (opponentGridSpawner != null)
-            {
-                UpdateOpponentMove(row, col, value);
             }
         }
     }
@@ -690,7 +707,7 @@ public class NetworkGameManager : NetworkBehaviour
             Random.InitState(gameRandomSeed.Value);
 
             // 确保UI界面已创建
-            if (mainBoardInstance == null || opponentBoardInstance == null)
+            if (localBoardInstance == null || remoteBoardInstance == null)
             {
                 Debug.Log("客户端因刷新请求创建游戏界面");
                 SetupMultiplayerBoards();

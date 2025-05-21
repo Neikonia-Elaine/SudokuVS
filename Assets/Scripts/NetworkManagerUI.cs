@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using Unity.Networking.Transport.Relay;
 
 /// <summary>
-/// 网络管理器UI助手类 - 简化版
-/// 集成到MenuManager中使用，处理网络连接和回调
+/// 简化版网络管理器UI助手类
+/// 集成到MenuManager中使用，处理网络连接和回调，移除玩家角色区分
 /// </summary>
 public class NetworkManagerUI : MonoBehaviour
 {
@@ -20,11 +20,8 @@ public class NetworkManagerUI : MonoBehaviour
 
     // 网络相关
     private string joinCode;
-    private bool isHost = false;
-    private const int MaxPlayers = 2;
-
-    // 连接状态 - 添加 getter 方法以使用该字段
     private bool isConnecting = false;
+    private const int MaxPlayers = 2;
 
     /// <summary>
     /// 获取当前是否正在连接
@@ -122,8 +119,6 @@ public class NetworkManagerUI : MonoBehaviour
             // 启动主机
             NetworkManager.Singleton.StartHost();
 
-            isHost = true;
-
             // 更新UI显示 - 通过MenuManager
             if (menuManager != null)
             {
@@ -131,7 +126,7 @@ public class NetworkManagerUI : MonoBehaviour
                     menuManager.createRoomLoadingAnimation.SetActive(false);
 
                 if (menuManager.createRoomTitle != null)
-                    menuManager.createRoomTitle.text = "Room was created"; // 房间已创建
+                    menuManager.createRoomTitle.text = "房间已创建";
 
                 if (menuManager.roomCodeText != null && menuManager.roomCodeText.gameObject != null)
                 {
@@ -156,12 +151,12 @@ public class NetworkManagerUI : MonoBehaviour
                     menuManager.createRoomLoadingAnimation.SetActive(false);
 
                 if (menuManager.createRoomTitle != null)
-                    menuManager.createRoomTitle.text = "Failed to create"; // 创建房间失败
+                    menuManager.createRoomTitle.text = "创建房间失败";
 
                 if (menuManager.roomCodeText != null && menuManager.roomCodeText.gameObject != null)
                 {
                     menuManager.roomCodeText.gameObject.SetActive(true);
-                    menuManager.roomCodeText.text = "please retry"; // 请重试
+                    menuManager.roomCodeText.text = "请重试";
                 }
             }
 
@@ -185,7 +180,7 @@ public class NetworkManagerUI : MonoBehaviour
         {
             if (menuManager != null && menuManager.joinStatusText != null)
             {
-                menuManager.joinStatusText.text = "Please enter the valid room code"; // 请输入有效的房间代码
+                menuManager.joinStatusText.text = "请输入有效的房间代码";
             }
             return;
         }
@@ -194,10 +189,10 @@ public class NetworkManagerUI : MonoBehaviour
         if (menuManager != null)
         {
             if (menuManager.joinRoomTitle != null)
-                menuManager.joinRoomTitle.text = "Joining the room...";
+                menuManager.joinRoomTitle.text = "正在加入房间...";
 
             if (menuManager.joinStatusText != null)
-                menuManager.joinStatusText.text = "Connecting...";
+                menuManager.joinStatusText.text = "连接中...";
 
             if (menuManager.joinRoomLoadingAnimation != null)
                 menuManager.joinRoomLoadingAnimation.SetActive(true);
@@ -220,8 +215,6 @@ public class NetworkManagerUI : MonoBehaviour
             // 启动客户端
             NetworkManager.Singleton.StartClient();
 
-            isHost = false;
-
             Debug.Log($"Joined room with code: {code}");
         }
         catch (System.Exception e)
@@ -235,7 +228,7 @@ public class NetworkManagerUI : MonoBehaviour
                     menuManager.joinRoomLoadingAnimation.SetActive(false);
 
                 if (menuManager.joinStatusText != null)
-                    menuManager.joinStatusText.text = "Failed to join the room, please check the room code";
+                    menuManager.joinStatusText.text = "加入房间失败，请检查房间代码";
 
                 if (menuManager.confirmJoinButton != null)
                     menuManager.confirmJoinButton.interactable = true;
@@ -260,10 +253,10 @@ public class NetworkManagerUI : MonoBehaviour
 
     private void OnClientConnected(ulong clientId)
     {
-        Debug.Log($"Client connected: {clientId}");
+        Debug.Log($"客户端已连接: {clientId}");
 
-        // 如果客户端已连接，切换到游戏面板
-        if (NetworkManager.Singleton.ConnectedClientsIds.Count == 2) // 当连接的客户端达到2个时（包括主机）
+        // 当两名玩家都已连接时，切换到游戏面板
+        if (NetworkManager.Singleton.ConnectedClientsIds.Count == 2)
         {
             // 使用主线程调度器执行UI更新
             StartCoroutine(DelayedShowGamePanel());
@@ -273,7 +266,7 @@ public class NetworkManagerUI : MonoBehaviour
     private System.Collections.IEnumerator DelayedShowGamePanel()
     {
         // 等待短暂延迟，确保网络连接稳定
-        yield return new WaitForSeconds(2.0f); // 增加延迟时间
+        yield return new WaitForSeconds(2.0f);
 
         Debug.Log("准备切换到游戏界面...");
 
@@ -300,12 +293,11 @@ public class NetworkManagerUI : MonoBehaviour
         isConnecting = false;
 
         // 通知NetworkGameManager刷新游戏状态
-        // 使用已有的方法 - 避免使用可能不存在的InitializeGameForAll方法
         if (networkGameManager != null)
         {
             Debug.Log("通知NetworkGameManager刷新游戏状态");
-            // 如果是主机，调用已有的方法来重置游戏
-            if (IsHost())
+            // 只有服务器才能调用重置游戏
+            if (NetworkManager.Singleton.IsServer || NetworkManager.Singleton.IsHost)
             {
                 // 使用现有的ResetGame方法，传入默认的30个挖空格子
                 networkGameManager.ResetGame(30);
@@ -315,7 +307,7 @@ public class NetworkManagerUI : MonoBehaviour
 
     private void OnClientDisconnected(ulong clientId)
     {
-        Debug.Log($"Client disconnected: {clientId}");
+        Debug.Log($"客户端断开连接: {clientId}");
 
         // 如果是本地客户端断开连接，返回主菜单
         if (clientId == NetworkManager.Singleton.LocalClientId)
@@ -332,20 +324,10 @@ public class NetworkManagerUI : MonoBehaviour
 
     private void OnServerStarted()
     {
-        Debug.Log("Server started");
+        Debug.Log("服务器已启动");
     }
 
     #endregion
-
-    /// <summary>
-    /// 获取当前是否为主机
-    /// </summary>
-    public bool IsHost()
-    {
-        return isHost;
-    }
-
-    // Add these methods to NetworkManagerUI.cs
 
     /// <summary>
     /// 处理网络断开连接 - 可从MenuManager调用
@@ -381,7 +363,6 @@ public class NetworkManagerUI : MonoBehaviour
 
             // 重置连接状态
             isConnecting = false;
-            isHost = false;
 
             // 通知其他依赖网络状态的系统
             OnNetworkDisconnected();

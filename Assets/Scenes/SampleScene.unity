@@ -451,13 +451,12 @@ MonoBehaviour:
   gameManager: {fileID: 739603774}
   defaultEmptyCount: 40
   twoPlayerGamePanel: {fileID: 1440773212}
-  mainSudokuContainer: {fileID: 1186870721}
-  opponentSudokuContainer: {fileID: 79201892}
+  localPlayerBoardContainer: {fileID: 79201892}
+  remoteBoardContainer: {fileID: 1186870721}
   sudokuBoardPrefab: {fileID: 6683242385088121219, guid: d612e876ecf5d49c0b573f4b0e57528b, type: 3}
-  opponentFixedCellColor: {r: 0.3, g: 0.3, b: 0.7, a: 0.7}
-  opponentMovedCellColor: {r: 0.2, g: 0.6, b: 1, a: 0.8}
-  opponentConflictCellColor: {r: 0.9, g: 0.3, b: 0.3, a: 0.7}
-  opponentBoardScale: 0.33
+  remoteMovedCellColor: {r: 0.2, g: 0.6, b: 1, a: 0.8}
+  remoteConflictCellColor: {r: 0.9, g: 0.3, b: 0.3, a: 0.7}
+  remoteBoardScale: 0.33
 --- !u!114 &45108728
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4040,13 +4039,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   victoryPanel: {fileID: 193793648}
   undoButton: {fileID: 1921160560}
+  currentBoardInstance: {fileID: 0}
   sudokuBoardPrefab: {fileID: 6683242385088121219, guid: d612e876ecf5d49c0b573f4b0e57528b, type: 3}
   sudokuBoardParent: {fileID: 1745190890}
   skillManager: {fileID: 1897854779}
   fixedNumberColor: {r: 0.2, g: 0.2, b: 0.6, a: 1}
   conflictNumberColor: {r: 0.8, g: 0.2, b: 0.2, a: 1}
   normalNumberColor: {r: 0.8679245, g: 0.48340684, b: 0.13510147, a: 1}
-  networkGameManager: {fileID: 0}
+  networkGameManager: {fileID: 45108727}
 --- !u!4 &739603775
 Transform:
   m_ObjectHideFlags: 0
@@ -6056,7 +6056,6 @@ GameObject:
   - component: {fileID: 1088704092}
   - component: {fileID: 1088704091}
   - component: {fileID: 1088704089}
-  - component: {fileID: 1088704090}
   m_Layer: 0
   m_Name: PlayerUpdate
   m_TagString: Untagged
@@ -6089,20 +6088,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &1088704090
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1088704088}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 105a6ce549d9d4e189d66fdefb90d3d6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  localPlayerRole: 0
 --- !u!114 &1088704091
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6117,10 +6102,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sendSignalButton: {fileID: 0}
   signalDisplayText: {fileID: 0}
-  playerRoleText: {fileID: 0}
   messageDisplayTime: 3
-  hostColor: {r: 0, g: 1, b: 0, a: 1}
-  guestColor: {r: 0, g: 0, b: 1, a: 1}
 --- !u!4 &1088704092
 Transform:
   m_ObjectHideFlags: 0
@@ -8418,9 +8400,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  playerStatusText: {fileID: 0}
-  hostColor: {r: 0, g: 1, b: 0, a: 1}
-  clientColor: {r: 0, g: 0, b: 1, a: 1}
 --- !u!4 &1538935938
 Transform:
   m_ObjectHideFlags: 0
@@ -17437,8 +17416,8 @@ MonoBehaviour:
   hintPanel: {fileID: 385108777}
   twoPlayerRoomPanel: {fileID: 371830428}
   multiPlayerGamePanel: {fileID: 1440773212}
-  mainSudokuContainer: {fileID: 1186870721}
-  opponentSudokuContainer: {fileID: 79201892}
+  localPlayerBoardContainer: {fileID: 1186870721}
+  remoteBoardContainer: {fileID: 79201892}
   gameManager: {fileID: 739603774}
   skillManager: {fileID: 1897854779}
   networkGameManager: {fileID: 45108727}

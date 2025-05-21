@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// 菜单管理器 - 扩展版本，整合了多人游戏功能
+/// 菜单管理器 - 修订版本，支持双棋盘但移除角色区分
 /// </summary>
 public class MenuManager : MonoBehaviour
 {
@@ -21,8 +21,8 @@ public class MenuManager : MonoBehaviour
     [Header("多人游戏面板")]
     public GameObject twoPlayerRoomPanel; // 双人房间面板
     public GameObject multiPlayerGamePanel; // 多人游戏面板
-    public Transform mainSudokuContainer; // 主数独容器
-    public Transform opponentSudokuContainer; // 对手数独容器
+    public Transform localPlayerBoardContainer; // 本地玩家数独容器
+    public Transform remoteBoardContainer; // 远程玩家数独容器
     #endregion
 
     #region 游戏管理器引用
@@ -322,14 +322,12 @@ public class MenuManager : MonoBehaviour
         SetPanelActive(optionPanel, true);
     }
 
-    // Replace the existing BackToMainMenu method in MenuManager.cs with this improved version:
-
+    // 返回主菜单
     public void BackToMainMenu()
     {
         Debug.Log("返回主菜单 - 开始清理网络资源和游戏状态");
 
         // 0. 特殊检查：确保多人游戏面板始终被关闭
-        // 这是一个双重保险，防止多人游戏面板依然保持激活状态
         if (multiPlayerGamePanel != null && multiPlayerGamePanel.activeSelf)
         {
             Debug.Log("发现多人游戏面板仍处于激活状态，强制关闭");
@@ -342,7 +340,7 @@ public class MenuManager : MonoBehaviour
             timerScript.PauseTimer();
         }
 
-        // 2. 确保多人游戏面板明确关闭（即使HideAllPanels已经包含了这些操作）
+        // 2. 确保多人游戏面板明确关闭
         if (multiPlayerGamePanel != null)
         {
             multiPlayerGamePanel.SetActive(false);
@@ -481,19 +479,19 @@ public class MenuManager : MonoBehaviour
         if (networkGameManager != null)
         {
             // 手动清理可能的数独板引用
-            GameObject mainBoardInstance = GameObject.Find("MainSudokuBoard");
-            GameObject opponentBoardInstance = GameObject.Find("OpponentSudokuBoard");
+            GameObject localBoardInstance = GameObject.Find("LocalPlayerSudokuBoard");
+            GameObject remoteBoardInstance = GameObject.Find("RemotePlayerSudokuBoard");
 
-            if (mainBoardInstance != null)
+            if (localBoardInstance != null)
             {
-                Debug.Log("清理主数独板引用");
-                Destroy(mainBoardInstance);
+                Debug.Log("清理本地玩家数独板引用");
+                Destroy(localBoardInstance);
             }
 
-            if (opponentBoardInstance != null)
+            if (remoteBoardInstance != null)
             {
-                Debug.Log("清理对手数独板引用");
-                Destroy(opponentBoardInstance);
+                Debug.Log("清理远程玩家数独板引用");
+                Destroy(remoteBoardInstance);
             }
         }
 
@@ -548,7 +546,7 @@ public class MenuManager : MonoBehaviour
     private void ShowCreateRoomPopup()
     {
         SetPanelActive(createRoomPopup, true);
-        if (createRoomTitle != null) createRoomTitle.text = "Creating room...";
+        if (createRoomTitle != null) createRoomTitle.text = "Creating the room...";
         if (roomCodeText != null && roomCodeText.gameObject != null) roomCodeText.gameObject.SetActive(false);
         if (copyCodeButton != null && copyCodeButton.gameObject != null) copyCodeButton.gameObject.SetActive(false);
         if (createRoomLoadingAnimation != null) createRoomLoadingAnimation.SetActive(true);
@@ -584,7 +582,7 @@ public class MenuManager : MonoBehaviour
             if (roomCodeText != null && roomCodeText.gameObject != null)
             {
                 roomCodeText.gameObject.SetActive(true);
-                roomCodeText.text = "NetworkManager not found";
+                roomCodeText.text = "Didn't find network";
             }
         }
     }
@@ -601,7 +599,7 @@ public class MenuManager : MonoBehaviour
         {
             Debug.LogError("NetworkManagerUI未找到，无法加入房间!");
             if (joinRoomLoadingAnimation != null) joinRoomLoadingAnimation.SetActive(false);
-            if (joinStatusText != null) joinStatusText.text = "NetworkManager not found";
+            if (joinStatusText != null) joinStatusText.text = "Didn't find networkManager";
         }
     }
 
@@ -616,7 +614,7 @@ public class MenuManager : MonoBehaviour
         {
             // 直接复制文本
             GUIUtility.systemCopyBuffer = roomCodeText.text;
-            Debug.Log($"Room code copied to clipboard: {roomCodeText.text}");
+            Debug.Log($"房间代码已复制到剪贴板: {roomCodeText.text}");
         }
     }
 
@@ -663,7 +661,7 @@ public class MenuManager : MonoBehaviour
         ShowGamePanels();
 
         // 创建数独盘，并放置在适当位置
-        Vector2 boardPosition = new Vector2(300f, 0f); // 单人模式位置偏右
+        Vector2 boardPosition = new Vector2(0f, 0f); // 居中位置
         GameObject boardInstance = gameManager.CreateAndSetupSudokuBoard(boardPosition);
 
         if (boardInstance == null)
