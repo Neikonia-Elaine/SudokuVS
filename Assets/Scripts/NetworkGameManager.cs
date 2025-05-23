@@ -80,7 +80,10 @@ public class NetworkGameManager : NetworkBehaviour
     {
         Waiting,
         Playing,
-        Finished
+        Finished,
+        Test1,
+        Test2,
+        Test3,
     }
 
     // 网络变量
@@ -224,7 +227,7 @@ public class NetworkGameManager : NetworkBehaviour
                 Debug.Log("服务器创建多人游戏界面...");
                 SetupMultiplayerBoards();
             }
-
+        
             // 延迟初始化游戏，确保UI已准备好
             StartCoroutine(DelayedHostStartGame());
         }
@@ -237,11 +240,11 @@ public class NetworkGameManager : NetworkBehaviour
     private System.Collections.IEnumerator DelayedHostStartGame()
     {
         yield return new WaitForSeconds(0.2f); // 短暂延迟
-
+    
         Debug.Log("主机初始化游戏...");
         Random.InitState(gameRandomSeed.Value);
         gameManager.StartNewGame(currentEmptyCount.Value);
-
+    
         // 额外刷新UI
         yield return new WaitForSeconds(0.5f);
         gameManager.UpdateAllCellsUI();
@@ -304,6 +307,11 @@ public class NetworkGameManager : NetworkBehaviour
                 {
                     gameManager.SetGridSpawner(localGridSpawner);
                 }
+                
+                // if (gameManager != null)
+                // {
+                //     gameManager.StartNewGame(currentDifficulty);
+                // }
             }
             else
             {
@@ -413,10 +421,10 @@ public class NetworkGameManager : NetworkBehaviour
         if (remoteBoardInstance == null) return;
 
         // 禁用远程玩家数独上的所有Button和Input组件
-        Button[] buttons = remoteBoardInstance.GetComponentsInChildren<Button>();
-        foreach (Button button in buttons)
+        CellManager[] cellManagers = remoteBoardInstance.GetComponentsInChildren<CellManager>();
+        foreach (CellManager cellManager in cellManagers)
         {
-            button.enabled = false;
+            cellManager.canClick = false;
         }
     }
 
@@ -430,8 +438,15 @@ public class NetworkGameManager : NetworkBehaviour
             // 如果是客户端，使用相同的随机种子初始化游戏
             if (IsClient)
             {
-                Random.InitState(gameRandomSeed.Value);
-                gameManager.StartNewGame(currentEmptyCount.Value);
+                // 确保UI界面已创建
+                // if (localBoardInstance == null || remoteBoardInstance == null)
+                // {
+                //     Debug.Log("创建游戏界面");
+                //     SetupMultiplayerBoards();
+                // }
+                //
+                // Random.InitState(gameRandomSeed.Value);
+                // gameManager.StartNewGame(currentEmptyCount.Value);
             }
         }
     }
@@ -554,9 +569,10 @@ public class NetworkGameManager : NetworkBehaviour
     [ClientRpc]
     private void BroadcastGameDataClientRpc()
     {
-        Debug.Log("客户端接收到游戏数据广播");
-
         if (IsServer) return; // 服务器已经有游戏数据
+        
+        Debug.Log("客户端接收到游戏数据广播");
+        
 
         // 确保清除任何进行中的操作
         StopAllCoroutines();

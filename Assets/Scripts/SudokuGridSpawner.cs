@@ -32,11 +32,13 @@ public class SudokuGridSpawner : MonoBehaviour
         {
             Debug.LogError("无法找到GameManager!");
         }
+        
+        CreateSudokuGrid();
     }
 
     void Start()
     {
-        CreateSudokuGrid();
+       
     }
 
     void Update()

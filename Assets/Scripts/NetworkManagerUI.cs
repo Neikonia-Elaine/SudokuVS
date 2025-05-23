@@ -17,6 +17,8 @@ public class NetworkManagerUI : MonoBehaviour
     [Header("引用")]
     [SerializeField] private MenuManager menuManager; // 菜单管理器引用
     [SerializeField] private NetworkGameManager networkGameManager; // 网络游戏管理器
+    [Header("游戏管理器引用")]
+    [SerializeField] private GameManager gameManager;
 
     // 网络相关
     private string joinCode;
@@ -254,6 +256,9 @@ public class NetworkManagerUI : MonoBehaviour
     private void OnClientConnected(ulong clientId)
     {
         Debug.Log($"客户端已连接: {clientId}");
+
+        //复位网络状态
+        gameManager.ResetIsNetworkGame();
 
         // 当两名玩家都已连接时，切换到游戏面板
         if (NetworkManager.Singleton.ConnectedClientsIds.Count == 2)

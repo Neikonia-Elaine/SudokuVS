@@ -81,6 +81,12 @@ public class GameManager : MonoBehaviour
         SetupUndoButton();
 
         // 检测是否处于网络游戏模式
+        ResetIsNetworkGame();
+    }
+
+    public void ResetIsNetworkGame()
+    {
+        // 检测是否处于网络游戏模式
         isNetworkGame = networkGameManager != null && Unity.Netcode.NetworkManager.Singleton.IsConnectedClient;
     }
 

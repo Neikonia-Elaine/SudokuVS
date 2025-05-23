@@ -13,6 +13,8 @@ public class CellManager : MonoBehaviour, IPointerClickHandler
     private TextMeshProUGUI numberText;
     private Image highlightOverlay;
 
+    public bool canClick = true;
+
     // 初始化格子
     public void Init(int r, int c, SudokuGridSpawner s, TextMeshProUGUI text, Image highlight)
     {
@@ -26,6 +28,10 @@ public class CellManager : MonoBehaviour, IPointerClickHandler
     // 点击时通知 Spawner
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (!canClick)
+        {
+            return;
+        }
         spawner.OnCellClicked(row, col);
         SetHighlight(true);
     }

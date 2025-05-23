@@ -80,3 +80,7 @@ crashlytics-build.properties
 *.app
 *.dylib
 
+/Sudoku2.0_BurstDebugInformation_DoNotShip
+/PC
+/.utmp
+/.idea
