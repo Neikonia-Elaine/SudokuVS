@@ -16,7 +16,7 @@ public class NetworkManagerUI : MonoBehaviour
 {
     [Header("引用")]
     [SerializeField] private MenuManager menuManager; // 菜单管理器引用
-    [SerializeField] private NetworkGameManager networkGameManager; // 网络游戏管理器
+    [SerializeField] public NetworkGameManager networkGameManager; // 网络游戏管理器
     [Header("游戏管理器引用")]
     [SerializeField] private GameManager gameManager;
 
@@ -306,6 +306,10 @@ public class NetworkManagerUI : MonoBehaviour
             {
                 // 使用现有的ResetGame方法，传入默认的30个挖空格子
                 networkGameManager.ResetGame(30);
+            }
+            else
+            {
+                
             }
         }
     }

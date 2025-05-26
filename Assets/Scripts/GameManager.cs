@@ -4,6 +4,8 @@ using TMPro;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
 using Unity.Netcode;
+using Unity.VisualScripting;
+using Random = System.Random;
 
 // 数独游戏核心逻辑
 // 生成数独谜题和解法
@@ -92,8 +94,10 @@ public class GameManager : MonoBehaviour
 
 
     // 开始新游戏
-    public void StartNewGame(int emptyCount)
+    public void StartNewGame(int gameRandomSeed, int emptyCount)
     {
+        rng = new Random(gameRandomSeed);
+        
         // 清空历史记录
         moveHistory.Clear();
 

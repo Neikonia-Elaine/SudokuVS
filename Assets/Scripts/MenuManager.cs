@@ -234,6 +234,7 @@ public class MenuManager : MonoBehaviour
             backToMainFromRoomButton.onClick.AddListener(() => {
                 SetPanelActive(twoPlayerRoomPanel, false);
                 SetPanelActive(mainPanel, true);
+                BackToMainMenu();
             });
         }
 
@@ -493,15 +494,17 @@ public class MenuManager : MonoBehaviour
                 Debug.Log("清理远程玩家数独板引用");
                 Destroy(remoteBoardInstance);
             }
+            
+            networkGameManager.ClearInstance();
         }
 
         // 清理可能留下的其他数独相关对象
-        GameObject[] sudokuObjects = GameObject.FindGameObjectsWithTag("SudokuBoard");
-        foreach (var obj in sudokuObjects)
-        {
-            Debug.Log($"清理数独相关对象: {obj.name}");
-            Destroy(obj);
-        }
+        // GameObject[] sudokuObjects = GameObject.FindGameObjectsWithTag("SudokuBoard");
+        // foreach (var obj in sudokuObjects)
+        // {
+        //     Debug.Log($"清理数独相关对象: {obj.name}");
+        //     Destroy(obj);
+        // }
 
         // 完成后强制GC回收
         System.GC.Collect();
@@ -695,7 +698,9 @@ public class MenuManager : MonoBehaviour
     {
         if (gameManager != null)
         {
-            gameManager.StartNewGame(currentDifficulty);
+            int newSeed = Random.Range(1, 100000);
+            Debug.Log($"设置随机种子: {newSeed}");
+            gameManager.StartNewGame(newSeed, currentDifficulty);
         }
         else
         {

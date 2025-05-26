@@ -81,9 +81,6 @@ public class NetworkGameManager : NetworkBehaviour
         Waiting,
         Playing,
         Finished,
-        Test1,
-        Test2,
-        Test3,
     }
 
     // 网络变量
@@ -108,6 +105,8 @@ public class NetworkGameManager : NetworkBehaviour
     // 追踪远程玩家移动的单元格
     private HashSet<Vector2Int> remoteMovedCells = new HashSet<Vector2Int>();
 
+    public int gameRandomSeedInt = 0;
+
     private void Awake()
     {
         moves = new NetworkList<MoveData>();
@@ -130,13 +129,13 @@ public class NetworkGameManager : NetworkBehaviour
         currentEmptyCount.OnValueChanged += OnEmptyCountChanged;
 
         // 监听客户端连接事件
-        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        //NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
 
-        if (IsServer)
-        {
-            // 服务器端初始化游戏
-            InitializeGame();
-        }
+        // if (IsServer)
+        // {
+        //     // 服务器端初始化游戏
+        //     InitializeGame();
+        // }
     }
 
     public override void OnNetworkDespawn()
@@ -144,10 +143,10 @@ public class NetworkGameManager : NetworkBehaviour
         base.OnNetworkDespawn();
 
         // 取消事件监听
-        if (NetworkManager.Singleton != null)
-        {
-            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
-        }
+        // if (NetworkManager.Singleton != null)
+        // {
+        //     NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+        // }
     }
 
     public override void OnDestroy()
@@ -166,14 +165,31 @@ public class NetworkGameManager : NetworkBehaviour
         }
     }
 
+    public void ClearInstance()
+    {
+        // 清理资源
+        if (localBoardInstance != null)
+        {
+            Destroy(localBoardInstance);
+            localBoardInstance = null;
+        }
+
+        if (remoteBoardInstance != null)
+        {
+            Destroy(remoteBoardInstance);
+            remoteBoardInstance = null;
+        }
+    }
+
     // 当客户端连接时调用
     private void OnClientConnected(ulong clientId)
     {
-        Debug.Log($"客户端已连接: {clientId}，准备初始化游戏界面");
+        Debug.Log($"客户端已连接: {clientId}");
 
         // 如果客户端数量为2，说明双方都已连接，显示双人游戏面板
         if (NetworkManager.Singleton.ConnectedClientsIds.Count == 2)
         {
+            Debug.Log($"准备初始化游戏界面");
             ShowMultiplayerGamePanel();
         }
     }
@@ -201,13 +217,15 @@ public class NetworkGameManager : NetworkBehaviour
         {
             int newSeed = Random.Range(1, 100000);
             gameRandomSeed.Value = newSeed;
+            gameRandomSeedInt = newSeed;
             Debug.Log($"设置随机种子: {newSeed}");
         }
         else
         {
             Debug.Log($"使用现有随机种子: {gameRandomSeed.Value}");
             // 确保使用已设置的种子
-            Random.InitState(gameRandomSeed.Value);
+            //Random.InitState(gameRandomSeed.Value);
+            gameRandomSeedInt = gameRandomSeed.Value;
         }
 
         // 固定空格数量为30，避免变化
@@ -218,7 +236,7 @@ public class NetworkGameManager : NetworkBehaviour
         currentState.Value = GameState.Playing;
         Debug.Log("游戏状态设置为: Playing");
 
-        // 确保服务器端（主机）自己也初始化游戏
+        //确保服务器端（主机）自己也初始化游戏
         if (gameManager != null)
         {
             // 在服务器上也创建游戏界面
@@ -231,7 +249,7 @@ public class NetworkGameManager : NetworkBehaviour
             // 延迟初始化游戏，确保UI已准备好
             StartCoroutine(DelayedHostStartGame());
         }
-
+        
         // 告诉所有客户端游戏已开始
         BroadcastGameDataClientRpc();
     }
@@ -242,12 +260,15 @@ public class NetworkGameManager : NetworkBehaviour
         yield return new WaitForSeconds(0.2f); // 短暂延迟
     
         Debug.Log("主机初始化游戏...");
-        Random.InitState(gameRandomSeed.Value);
-        gameManager.StartNewGame(currentEmptyCount.Value);
+        //Random.InitState(gameRandomSeed.Value);
+        gameManager.StartNewGame(gameRandomSeedInt, currentEmptyCount.Value);
     
         // 额外刷新UI
         yield return new WaitForSeconds(0.5f);
         gameManager.UpdateAllCellsUI();
+        
+        // 更新远程玩家棋盘的固定单元格
+        UpdateRemoteFixedCells();
     }
 
     // 创建多人游戏的数独板
@@ -457,7 +478,9 @@ public class NetworkGameManager : NetworkBehaviour
         Debug.Log($"游戏随机种子从 {previous} 变更为 {current}");
 
         // 设置随机种子，确保所有客户端生成相同的数独谜题
-        Random.InitState(current);
+        // gameRandomSeed.Value = current;
+        //Random.InitState(current);
+        gameRandomSeedInt = current;
     }
 
     // 空格数量变化回调
@@ -477,7 +500,7 @@ public class NetworkGameManager : NetworkBehaviour
             if (move.playerId != NetworkManager.Singleton.LocalClientId)
             {
                 // 在本地应用其他玩家的移动
-                gameManager.SetCellValue(move.row, move.col, move.value);
+                //gameManager.SetCellValue(move.row, move.col, move.value);
                 Debug.Log($"应用玩家 {move.playerId} 的移动: ({move.row}, {move.col}) = {move.value}");
 
                 // 更新远程玩家的小数独视图
@@ -580,10 +603,10 @@ public class NetworkGameManager : NetworkBehaviour
         // 客户端需要初始化相同的游戏
         if (gameManager != null)
         {
-            Debug.Log($"客户端使用随机种子 {gameRandomSeed.Value} 和空格数量 {currentEmptyCount.Value} 初始化游戏");
+            Debug.Log($"客户端使用随机种子 {gameRandomSeedInt} 和空格数量 {currentEmptyCount.Value} 初始化游戏");
 
             // 设置随机种子
-            Random.InitState(gameRandomSeed.Value);
+            //Random.InitState(gameRandomSeed.Value);
 
             // 创建UI界面（如果需要）
             if (localBoardInstance == null || remoteBoardInstance == null)
@@ -614,8 +637,8 @@ public class NetworkGameManager : NetworkBehaviour
         {
             Debug.Log("客户端延迟初始化游戏...");
             // 使用正确的随机种子和空格数量启动游戏
-            Random.InitState(gameRandomSeed.Value);
-            gameManager.StartNewGame(currentEmptyCount.Value);
+            //Random.InitState(gameRandomSeed.Value);
+            gameManager.StartNewGame(gameRandomSeedInt, currentEmptyCount.Value);
 
             // 再次更新UI，确保显示正确
             yield return new WaitForSeconds(0.5f);
@@ -703,11 +726,6 @@ public class NetworkGameManager : NetworkBehaviour
     [ClientRpc]
     private void RefreshGameUIClientRpc()
     {
-        Debug.Log("收到刷新游戏UI的请求");
-
-        // 确保清除任何进行中的操作
-        StopAllCoroutines();
-
         // 不同客户端处理
         if (IsServer)
         {
@@ -716,11 +734,16 @@ public class NetworkGameManager : NetworkBehaviour
         }
         else
         {
+            Debug.Log("收到刷新游戏UI的请求");
+
+            // 确保清除任何进行中的操作
+            StopAllCoroutines();
+            
             // 客户端处理
             Debug.Log("客户端刷新游戏UI");
 
             // 确保设置正确的随机种子
-            Random.InitState(gameRandomSeed.Value);
+            //Random.InitState(gameRandomSeed.Value);
 
             // 确保UI界面已创建
             if (localBoardInstance == null || remoteBoardInstance == null)
