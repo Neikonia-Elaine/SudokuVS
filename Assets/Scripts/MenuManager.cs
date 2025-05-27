@@ -52,6 +52,9 @@ public class MenuManager : MonoBehaviour
     public Button createRoomButton;
     public Button joinRoomButton;
     public Button backToMainFromRoomButton;
+    public Button sendDataButton;
+    public TMP_InputField inputField;
+    public TextMeshProUGUI skillIdTxt;
 
     [Header("创建房间弹窗")]
     public GameObject createRoomPopup;
@@ -235,6 +238,15 @@ public class MenuManager : MonoBehaviour
                 SetPanelActive(twoPlayerRoomPanel, false);
                 SetPanelActive(mainPanel, true);
                 BackToMainMenu();
+            });
+        }
+
+        
+        if (sendDataButton != null)
+        {
+            sendDataButton.onClick.AddListener(() =>
+            {
+                networkGameManager.SetSkillId(int.Parse(inputField.text));
             });
         }
 

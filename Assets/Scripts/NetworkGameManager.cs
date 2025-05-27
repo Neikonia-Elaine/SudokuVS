@@ -30,6 +30,9 @@ public class NetworkGameManager : NetworkBehaviour
     [SerializeField] private Color remoteConflictCellColor = new Color(0.9f, 0.3f, 0.3f, 0.7f); // 远程玩家冲突单元格颜色
     [SerializeField] private float remoteBoardScale = 0.33f; // 远程玩家数独大小比例
 
+
+    [SerializeField] private MenuManager menuManager; 
+
     // 表示一个移动操作，实现 IEquatable 接口以满足 NetworkList 的要求
     public struct MoveData : INetworkSerializable, System.IEquatable<MoveData>
     {
@@ -488,7 +491,63 @@ public class NetworkGameManager : NetworkBehaviour
     {
         Debug.Log($"游戏空格数量从 {previous} 变更为 {current}");
     }
+    
+ 
 
+    /// <summary>
+    /// 修改技能ID-并广播给其他人
+    /// </summary>
+    /// <param name="skillId"></param>
+    public void SetSkillId(int skillId)
+    {
+        Debug.Log($"发送数据SkillId: {skillId}");
+        if (IsServer)
+        {
+            SendDataToAllClientRpc(skillId);
+        }
+        else
+        {
+            SendDataToServerRpc(skillId);
+        }
+        
+    }
+    
+    // 客户端调用RPC请求修改
+    [ServerRpc(RequireOwnership = false)]
+    public void SendDataToServerRpc(int data)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+        Debug.Log($"服务器收到数据: {data}");
+        OnSkillChanged(data);
+        // 服务器可以再转发给其他客户端
+    }
+    
+    
+    // 服务器调用（广播给所有客户端）
+    [ClientRpc]
+    public void SendDataToAllClientRpc(int data)
+    {
+        if (IsServer)
+        {
+            return;
+        }
+        Debug.Log($"客户端收到数据: {data}");
+        OnSkillChanged(data);
+    }
+
+    
+    // 技能变化回调
+    private void OnSkillChanged(int current)
+    {
+        //Debug.Log($"游戏技能 变更为 {current}");
+        menuManager.skillIdTxt.text = $"收到的数据：{current.ToString()}";
+    }
+
+    
+    
     // 移动列表变化回调
     private void OnMovesChanged(NetworkListEvent<MoveData> changeEvent)
     {
